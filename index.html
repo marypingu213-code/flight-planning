@@ -10,7 +10,7 @@
     <style>
         body { font-family: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; background-color: #f3f4f6; }
         
-        /* 機票卡片特殊造型 */
+        /* 機票卡片特殊造型 (保留你原本的設計，未來可搭配使用) */
         .ticket-card {
             position: relative;
             background: #fff;
@@ -28,7 +28,6 @@
         }
         @media (min-width: 768px) { .ticket-card { flex-direction: row; } }
         
-        /* 機票切口與虛線 */
         .ticket-cutout { position: absolute; width: 20px; height: 20px; background-color: #f3f4f6; border-radius: 50%; z-index: 10; }
         .ticket-cutout.top { top: -10px; left: 66.666%; transform: translateX(-50%); border-bottom: 1px solid #e5e7eb; }
         .ticket-cutout.bottom { bottom: -10px; left: 66.666%; transform: translateX(-50%); border-top: 1px solid #e5e7eb; }
@@ -62,7 +61,6 @@
     </nav>
 
     <div class="max-w-4xl mx-auto px-4 py-6 mt-4">
-        
         <div class="space-y-6">
             
             <div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-sm text-white p-6">
@@ -83,7 +81,7 @@
                     <div class="flex flex-col items-center justify-center pointer-events-none py-2">
                         <i class="fa-solid fa-cloud-arrow-up text-3xl text-emerald-200 mb-2 group-hover:scale-110 transition-transform"></i>
                         <p class="text-sm font-bold">點擊此處 或 將填好的 Excel 檔案拖曳至此</p>
-                        <p class="text-[11px] text-emerald-100/70 mt-1">支援 .xlsx, .xls 格式，系統會自動加計高鐵/接駁費並排序</p>
+                        <p class="text-[11px] text-emerald-100/70 mt-1">支援 .xlsx, .xls 格式，上傳後將直接顯示於下方</p>
                     </div>
                 </div>
             </div>
@@ -151,52 +149,94 @@
                     </div>
                 </form>
             </div>
+
+            <div id="resultContainer" class="mt-8">
+                </div>
+
         </div>
     </div>
 
     <script>
-        // 1. 處理 Excel 檔案上傳的核心功能
+        // 處理 Excel 檔案上傳
         function importExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // 建立一個 FileReader 來讀取檔案內容
             const reader = new FileReader();
             
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    // 使用已經引入的 SheetJS (XLSX) 套件來解析 Excel
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 抓取第一個工作表 (Sheet)
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // 將工作表轉換為 JavaScript 可以讀取的 JSON 陣列
                     const excelData = XLSX.utils.sheet_to_json(worksheet);
                     
-                    // 這裡可以換成你想將資料顯示在網頁上的邏輯
-                    console.log("讀取成功！這是你的 Excel 資料：", excelData);
-                    alert(`成功讀取了 ${excelData.length} 筆航班資料！\n(請按 F12 打開開發者工具的 Console 查看詳細資料)`);
+                    if(excelData.length === 0) {
+                        alert("Excel 裡面沒有資料喔！");
+                        return;
+                    }
+
+                    // 🔥 呼叫新的函數：把資料畫到畫面上 🔥
+                    renderDataToScreen(excelData);
                     
                 } catch (error) {
                     console.error("解析 Excel 時發生錯誤：", error);
                     alert("檔案讀取失敗，請確認上傳的是正確的 Excel 格式 (.xlsx 或 .xls)");
                 } finally {
-                    // 清空 input，這樣同一個檔案再次上傳才會觸發 onchange
                     event.target.value = '';
                 }
             };
 
-            // 以 ArrayBuffer 格式讀取檔案 (SheetJS 推薦做法)
             reader.readAsArrayBuffer(file);
         }
 
-        // 2. 避免點擊其他按鈕報錯的佔位函數 (未來可根據需求補上功能)
+        // 🔥 新增的函數：負責把資料變成表格顯示在網頁上
+        function renderDataToScreen(data) {
+            const container = document.getElementById('resultContainer');
+            
+            // 抓取 Excel 的第一列作為表格的「標題 (欄位名稱)」
+            const headers = Object.keys(data[0]);
+            
+            // 開始組裝 HTML
+            let htmlString = `
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-500"></i> 讀取結果 (${data.length} 筆)
+                </h2>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left whitespace-nowrap">
+                            <thead class="text-xs text-gray-700 bg-gray-100 border-b">
+                                <tr>
+            `;
+            
+            // 產生表頭 (th)
+            headers.forEach(header => {
+                htmlString += `<th class="px-6 py-3">${header}</th>`;
+            });
+            htmlString += `</tr></thead><tbody>`;
+
+            // 產生資料列 (tr, td)
+            data.forEach(row => {
+                htmlString += `<tr class="border-b hover:bg-gray-50 transition-colors">`;
+                headers.forEach(header => {
+                    // 如果該格子是空的，就顯示空白
+                    const cellValue = row[header] !== undefined ? row[header] : '';
+                    htmlString += `<td class="px-6 py-4 text-gray-600">${cellValue}</td>`;
+                });
+                htmlString += `</tr>`;
+            });
+
+            htmlString += `</tbody></table></div></div>`;
+            
+            // 把組裝好的 HTML 塞進原本預留的區塊中
+            container.innerHTML = htmlString;
+        }
+
+        // 清空資料
         function clearAllData() {
             if(confirm("確定要清空所有資料嗎？")) {
-                alert("這裡未來會寫入清空資料的邏輯！");
+                document.getElementById('resultContainer').innerHTML = ''; // 清空顯示區塊
             }
         }
 
@@ -205,11 +245,9 @@
         }
 
         function updateFormOptions() {
-            // 當出發地改變時，連動更新目的地或航空公司的邏輯
             console.log("更新表單選項...");
         }
 
-        // 3. 切換「台灣出發」與「日本出發」的 UI 邏輯
         function setDirection(direction) {
             const btnTwToJp = document.getElementById('btnTwToJp');
             const btnJpToTw = document.getElementById('btnJpToTw');
