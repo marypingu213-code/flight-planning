@@ -146,4 +146,88 @@
 
                     <div class="col-span-2 bg-indigo-50/70 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between border border-indigo-100 text-xs">
                         <div class="text-indigo-800 mb-2 sm:mb-0 flex items-center font-medium">
-                            <i class="fa-solid fa-arrow-up-right-from-square text-indigo-500 mr-2"></i> 選好日期與地點，即可一鍵
+                            <i class="fa-solid fa-arrow-up-right-from-square text-indigo-500 mr-2"></i> 選好日期與地點，即可一鍵查詢
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 處理 Excel 檔案上傳的核心功能
+        function importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 建立一個 FileReader 來讀取檔案內容
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    // 使用已經引入的 SheetJS (XLSX) 套件來解析 Excel
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // 抓取第一個工作表 (Sheet)
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // 將工作表轉換為 JavaScript 可以讀取的 JSON 陣列
+                    const excelData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // 這裡可以換成你想將資料顯示在網頁上的邏輯
+                    console.log("讀取成功！這是你的 Excel 資料：", excelData);
+                    alert(`成功讀取了 ${excelData.length} 筆航班資料！\n(請按 F12 打開開發者工具的 Console 查看詳細資料)`);
+                    
+                } catch (error) {
+                    console.error("解析 Excel 時發生錯誤：", error);
+                    alert("檔案讀取失敗，請確認上傳的是正確的 Excel 格式 (.xlsx 或 .xls)");
+                } finally {
+                    // 清空 input，這樣同一個檔案再次上傳才會觸發 onchange
+                    event.target.value = '';
+                }
+            };
+
+            // 以 ArrayBuffer 格式讀取檔案 (SheetJS 推薦做法)
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 2. 避免點擊其他按鈕報錯的佔位函數 (未來可根據需求補上功能)
+        function clearAllData() {
+            if(confirm("確定要清空所有資料嗎？")) {
+                alert("這裡未來會寫入清空資料的邏輯！");
+            }
+        }
+
+        function downloadExcelTemplate() {
+            alert("這裡未來會寫入下載 Excel 範本的邏輯！");
+        }
+
+        function updateFormOptions() {
+            // 當出發地改變時，連動更新目的地或航空公司的邏輯
+            console.log("更新表單選項...");
+        }
+
+        // 3. 切換「台灣出發」與「日本出發」的 UI 邏輯
+        function setDirection(direction) {
+            const btnTwToJp = document.getElementById('btnTwToJp');
+            const btnJpToTw = document.getElementById('btnJpToTw');
+            const labelDeparture = document.getElementById('labelDeparture');
+            const labelArrival = document.getElementById('labelArrival');
+
+            if (direction === 'TW_TO_JP') {
+                btnTwToJp.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-700 transition-all";
+                btnJpToTw.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 transition-all";
+                labelDeparture.innerText = "出發地點 (台灣)";
+                labelArrival.innerText = "抵達地點 (日本)";
+            } else {
+                btnJpToTw.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-700 transition-all";
+                btnTwToJp.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 transition-all";
+                labelDeparture.innerText = "出發地點 (日本)";
+                labelArrival.innerText = "抵達地點 (台灣)";
+            }
+        }
+    </script>
+</body>
+</html>
